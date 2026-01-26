@@ -1,0 +1,27 @@
+def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
+    Vr=[]
+    e=[]
+    for s in range(len(IOSM)):
+        for (t,s_prime) in IOSM[s]:
+            if t[0]=='!':
+                a=t[1:]
+                if a in L:
+                    Vr.append(a)
+                    e.append((s,'puit'))
+    Vb=[i for i in IOSM if i not in Vr]+['puit']
+    n=len(Vr+Vb)
+    for s in range(len(IOSM)):
+        for t,s_prime in IOSM[s]:
+            if (s in Vb and s_prime in Vr) or (s in Vr and s_prime in Vb):
+                e.append((s,s_prime))
+            else:
+                if s in Vb:
+                    Vr.append(n)
+                else:
+                    Vb.append(n)
+                e.append((s,n))
+                e.append((n,s_prime))
+                n+=1
+    return (Vr,Vb,e)
+
+
