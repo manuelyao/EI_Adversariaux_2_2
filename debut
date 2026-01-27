@@ -35,7 +35,7 @@ def strategie_gagnante(t,i,j,Vr,Vb,e):
     kj = 0
     for j_prime in range(j+1):
         i_prime=0
-        while (i_prime<1 or W[i_prime-1][j_prime]==W[i_prime][j_prime]) and i_prime<=i:
+        while (i_prime<=i):
             W[i_prime+1][j_prime]=W[i_prime][j_prime]
             for p in Vb:
                 if not p in W[i_prime][j_prime]:
