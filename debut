@@ -9,7 +9,7 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
                     Vr.append(a)
                     e.append((s,'puit'))
     Vb=[i for i in IOSM if i not in Vr]+['puit']
-    n=len(Vr+Vb)
+    n=len(Vr+Vb)-1
     for s in range(len(IOSM)):
         for t,s_prime in IOSM[s]:
             if (s in Vb and s_prime in Vr) or (s in Vr and s_prime in Vb):
@@ -22,6 +22,23 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
                 e.append((s,n))
                 e.append((n,s_prime))
                 n+=1
+    
     return (Vr,Vb,e)
 
+
+
+def strategie_gagnante(t,i,j,Vr,Vb,e):
+    W = [[[]]*(j+1)]*(i+2)
+    kj = 0
+    for j_prime in range(1,j+1):
+        i_prime=kj
+        while (i_prime<1 or W[i_prime-1][j_prime]==W[i_prime][j_prime]) and i_prime<=i:
+            W[i_prime+1][j_prime]=W[i_prime][j_prime]
+            for p in Vb:
+                if not p in W[i_prime][j_prime]:
+                    for q in W[i_prime][j_prime]:
+                        if (p,_,q) in e:
+                            W[i_prime+1][j_prime].append(p)
+                            break
+                
 
