@@ -25,9 +25,24 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
     Vr.append(n)
     e.append((n,'tau','puit'))
     e.append(('puit','tau',n))
+    
     return (Vr,Vb,e)
 
-exemple=[[('?coin',1)],[('!Bad',0),('!Good',2)],[('?Cancel',0),('?Soda',3)],[('!Can',0),('!Unav',2)]]
-print(jeu_associe(exemple,['Good','Can','Bad','Soda','Cancel', 'Unav']))
 
+
+def strategie_gagnante(t,i,j,Vr,Vb,e):
+    W = [[[]]*(j+1)]*(i+2)
+    kj = 0
+    for j_prime in range(1,j+1):
+        i_prime=kj
+        while (i_prime<1 or W[i_prime-1][j_prime]==W[i_prime][j_prime]) and i_prime<=i:
+            W[i_prime+1][j_prime]=W[i_prime][j_prime]
+            for p in Vb:
+                if not p in W[i_prime][j_prime]:
+                    for q in W[i_prime][j_prime]:
+                        if (p,_,q) in e:
+                            W[i_prime+1][j_prime].append(p)
+                            break
+                
+                
 
