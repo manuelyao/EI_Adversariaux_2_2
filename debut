@@ -1,17 +1,23 @@
 import numpy as np
+import random
+import sys
+import os
+import datetime
 
-def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
+def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
     Vr=[]
     e=[]
     for s in range(len(IOSM)):
         for (t,s_prime) in IOSM[s]:
-            if t[0]=='!':
+            if t.startswith('!'):
                 a=t[1:]
-                if a in L and s not in Vr:
+                if s not in Vr:
                     Vr.append(s)
                     e.append((s,'tau','puit'))
+
     Vb=[i for i in range(len(IOSM)) if i not in Vr]
-    n=len(Vr+Vb)-1
+    n=len(IOSM)
+
     for s in range(len(IOSM)):
         for t,s_prime in IOSM[s]:
             if (s in Vb and s_prime in Vr) or (s in Vr and s_prime in Vb):
@@ -19,13 +25,16 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
             else:
                 if s in Vb:
                     Vr.append(n)
+                    e.append((n, 'tau', 'puit'))
                 else:
                     Vb.append(n)
+                
                 e.append((s,t,n))
                 e.append((n,'tau',s_prime))
                 n+=1
+    
     Vr.append(n)
-    Vb.append('puit')
+    if 'puit' not in Vb: Vb.append('puit')
     e.append((n,'tau','puit'))
     e.append(('puit','tau',n))
     
@@ -38,72 +47,73 @@ def strategie_gagnante(t,Vr,Vb,e):
     Returns the W strategy matrix representing the best strategies
     when it comes to reaching t. Also allows for the calculation of
     the rank of a point."""
-    W = [[]]
-    kj = 0
-    W[0][0]=[t]
-    i,j=0,0
-    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]): #end detection
-        i=1
-        while W[i-1][j] != W[i][j]:
-            W[i].append([]) #dynamically grow w on axis 1
-            if i == len(W)-1:
-                W.append([]) #dynamically grow w on axis 0
-            W[i+1][j]=W[i][j].copy()
-            trouve = False
-            for p in Vb:
-                if not p in W[i][j]:
-                    for q in W[i][j]:
-                        if trouve:
-                            break
-                        for elt in e:
-                            (pe,_,qe) = elt
-                            if (p,q) == (pe,qe) and not p in W[i+1][j]:
-                                W[i+1][j].append(p) #According to the formula, add all p of Vb
-                                Trouve = True       #such that there exists q in Wij
-                                break               #with (p,q) in e
-            trouve = False
-            for p in Vr:
-                if not p in W[i][j]:
-                    for q in Vb:
-                        if trouve:
-                            break
-                        for elt in e:
-                            (pe,_,qe) = elt         
-                            if ((p,q) == (pe,qe) and q in W[i][j]
-                                and not p in W[i+1][j]): 
-                                                    #According to the formula, add all p of Vr
-                                                    #such that there exists q
-                                W[i+1][j].append(p) #in Vb with (p,q) in e and q in Wij
-                                trouve = True
-                                break
-            i += 1
-        
-        kj = i-1
-
-        W[0].append(W[kj][j].copy())
-        for p in Vr:
-            for q in Vb:                        #According to the formula, add all p of Vr
-                for r in Vb:                    #such that there exists (q,r) in Vb² with
-                    if ((p,_,q) in e and (p,_,r) in e #(p,q) and (p,r) in e, q in Wkj_j 
-                        and q in W[kj][j] and not r in W[kj][j] #and r not in Wkj_j
-                        and p not in W[0][j+1]):
-                        W[0][j+1].append(p)
-                        break
     
+    all_nodes = Vr + Vb + ['puit']
+    succs = {node: [] for node in all_nodes}
+    for u, _, v in e:
+        if u in succs: 
+            succs[u].append(v)
+    
+    W = []
+    current_set = {t, 'puit'}
+    W.append([current_set])
+    
+    j = 0
+    while True:
+        while True:
+            last_set = W[j][-1]
+            new_set = last_set.copy()
+
+            for p in Vb:
+                if p not in new_set:
+                    if any(q in last_set for q in succs.get(p, [])):
+                        new_set.add(p)
+            
+            for p in Vr:
+                if p not in new_set:
+                    children = succs.get(p, [])
+                    if children and all(q in last_set for q in children):
+                        new_set.add(p)
+            
+            if len(new_set) == len(last_set):
+                break 
+            
+            W[j].append(new_set)
+            
+        stable_set = W[j][-1]
+        next_j_start_set = stable_set.copy()
+        added_vertical = False
+        
+        for p in Vr:
+            if p not in stable_set:
+                children = succs.get(p, [])
+                has_in = any(q in stable_set for q in children)
+                has_out = any(q not in stable_set for q in children)
+                
+                if has_in and has_out:
+                    next_j_start_set.add(p)
+                    added_vertical = True
+        
+        if not added_vertical:
+            break
+
+        W.append([next_j_start_set])
+        j += 1
+        
     return W
 
+def get_rank(p, W):
+    for j in range(len(W)):
+        for i in range(len(W[j])):
+            if p in W[j][i]:
+                return (j, i)
+    return (np.inf, np.inf)
 
-        
-def rank(p,t,Vr,Vb,e):
-    W = strategie_gagnante(t,Vr,Vb,e)
-    for i in range(len(W)):
-        for j in range(len(W[i])):
-            if p in W[i][j]:
-                return (i,j)
-    return (np.inf,np.inf)
+def get_successors(node, e):
+    return [end for start, act, end in e if start == node]
 
-
-
-                
-                
-
+def get_transition_action(start_node, end_node, e):
+    for s, act, end in e:
+        if s == start_node and end == end_node:
+            return act
+    return None
