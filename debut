@@ -5,23 +5,29 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
         for (t,s_prime) in IOSM[s]:
             if t[0]=='!':
                 a=t[1:]
-                if a in L:
-                    Vr.append(a)
-                    e.append((s,'puit'))
-    Vb=[i for i in IOSM if i not in Vr]+['puit']
-    n=len(Vr+Vb)
+                if a in L and s not in Vr:
+                    Vr.append(s)
+                    e.append((s,'tau','puit'))
+    Vb=[i for i in range(len(IOSM)) if i not in Vr]+['puit']
+    n=len(Vr+Vb)-1
     for s in range(len(IOSM)):
         for t,s_prime in IOSM[s]:
             if (s in Vb and s_prime in Vr) or (s in Vr and s_prime in Vb):
-                e.append((s,s_prime))
+                e.append((s,t,s_prime))
             else:
                 if s in Vb:
                     Vr.append(n)
                 else:
                     Vb.append(n)
-                e.append((s,n))
-                e.append((n,s_prime))
+                e.append((s,t,n))
+                e.append((n,'tau',s_prime))
                 n+=1
+    Vr.append(n)
+    e.append((n,'tau','puit'))
+    e.append(('puit','tau',n))
     return (Vr,Vb,e)
+
+exemple=[[('?coin',1)],[('!Bad',0),('!Good',2)],[('?Cancel',0),('?Soda',3)],[('!Can',0),('!Unav',2)]]
+print(jeu_associe(exemple,['Good','Can','Bad','Soda','Cancel', 'Unav']))
 
 
