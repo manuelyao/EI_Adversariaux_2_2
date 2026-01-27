@@ -42,7 +42,7 @@ def strategie_gagnante(t,Vr,Vb,e):
     kj = 0
     W[0][0]=[t]
     i,j=0,0
-    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]): #detection of stagnance
+    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]): #end detection
         i=1
         while W[i-1][j] != W[i][j]:
             W[i].append([]) #dynamically grow w on axis 1
