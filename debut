@@ -49,18 +49,33 @@ def strategie_gagnante(t,Vr,Vb,e):
             if i == len(W)-1:
                 W.append([]) #dynamically grow w on axis 0
             W[i+1][j]=W[i][j].copy()
+            trouve = False
             for p in Vb:
                 if not p in W[i][j]:
                     for q in W[i][j]:
-                        if (p,_,q) in e:        #According to the formula, add all p of Vb
-                            W[i+1][j].append(p) #such that there exists q in Wij
-                            break               #with (p,q) in e
+                        if trouve:
+                            break
+                        for elt in e:
+                            (pe,_,qe) = elt
+                            if (p,q) == (pe,qe) and not p in W[i+1][j]:
+                                W[i+1][j].append(p) #According to the formula, add all p of Vb
+                                Trouve = True       #such that there exists q in Wij
+                                break               #with (p,q) in e
+            trouve = False
             for p in Vr:
                 if not p in W[i][j]:
-                    for q in Vb:                #According to the formula, add all p of Vr
-                        if (p,_,q) in e and q in W[i][j]: #such that there exists q
-                            W[i+1][j].append(p) #in Vb with (p,q) in e and q in Wij
+                    for q in Vb:
+                        if trouve:
                             break
+                        for elt in e:
+                            (pe,_,qe) = elt         
+                            if ((p,q) == (pe,qe) and q in W[i][j]
+                                and not p in W[i+1][j]): 
+                                                    #According to the formula, add all p of Vr
+                                                    #such that there exists q
+                                W[i+1][j].append(p) #in Vb with (p,q) in e and q in Wij
+                                trouve = True
+                                break
             i += 1
         
         kj = i-1
