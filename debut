@@ -33,8 +33,8 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
 def strategie_gagnante(t,i,j,Vr,Vb,e):
     W = [[[]]*(j+1)]*(i+2)
     kj = 0
-    for j_prime in range(1,j+1):
-        i_prime=kj
+    for j_prime in range(j+1):
+        i_prime=0
         while (i_prime<1 or W[i_prime-1][j_prime]==W[i_prime][j_prime]) and i_prime<=i:
             W[i_prime+1][j_prime]=W[i_prime][j_prime]
             for p in Vb:
@@ -43,6 +43,33 @@ def strategie_gagnante(t,i,j,Vr,Vb,e):
                         if (p,_,q) in e:
                             W[i_prime+1][j_prime].append(p)
                             break
+            for p in Vr:
+                if not p in W[i_prime][j_prime]:
+                    for q in Vb:
+                        if (p,_,q) in e and q in W[i_prime][j_prime]:
+                            W[i_prime+1][j_prime].append(p)
+                            break
+            i_prime += 1
+        
+        for i in range(i+1):
+            if W[i][j_prime]==W[i+1][j_prime]:
+                kj=i
+                break
+
+        if j_prime < j:
+            W[0][j_prime+1]=W[kj][j_prime]
+            for p in Vr:
+                for q in Vb:
+                    for r in Vb:
+                        if ((p,_,q) in e and (p,_,r) in e
+                            and q in W[kj][j_prime] and not r in W[kj][j_prime]
+                            and p not in W[0][j_prime+1]):
+                            W[0][j_prime+1].append(p)
+                            break
+    
+    return W[i][j]
+        
+
                 
                 
 
