@@ -1,3 +1,5 @@
+import numpy as np
+
 def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
     Vr=[]
     e=[]
@@ -81,6 +83,7 @@ def rank(p,Vr,Vb,e):
         for j in range(len(W[i])):
             if p in W[i][j]:
                 return (i,j)
+    return (np.inf,np.inf)
 
 
 
