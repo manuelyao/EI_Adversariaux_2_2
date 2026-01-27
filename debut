@@ -33,6 +33,7 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
 def strategie_gagnante(t,i,j,Vr,Vb,e):
     W = [[[]]*(j+1)]*(i+2)
     kj = 0
+    W[0][0]=t
     for j_prime in range(j+1):
         i_prime=0
         while (i_prime<=i):
