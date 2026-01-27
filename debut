@@ -8,7 +8,7 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
                 if a in L and s not in Vr:
                     Vr.append(s)
                     e.append((s,'tau','puit'))
-    Vb=[i for i in range(len(IOSM)) if i not in Vr]+['puit']
+    Vb=[i for i in range(len(IOSM)) if i not in Vr]
     n=len(Vr+Vb)-1
     for s in range(len(IOSM)):
         for t,s_prime in IOSM[s]:
@@ -23,6 +23,7 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
                 e.append((n,'tau',s_prime))
                 n+=1
     Vr.append(n)
+    Vb.append('puit')
     e.append((n,'tau','puit'))
     e.append(('puit','tau',n))
     
@@ -30,46 +31,58 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
 
 
 
-def strategie_gagnante(t,i,j,Vr,Vb,e):
-    W = [[[]]*(j+1)]*(i+2)
+def strategie_gagnante(t,Vr,Vb,e):
+    W = [[]]
     kj = 0
-    W[0][0]=t
-    for j_prime in range(j+1):
-        i_prime=0
-        while (i_prime<=i):
-            W[i_prime+1][j_prime]=W[i_prime][j_prime]
+    W[0][0]=[t]
+   # current = {t}
+   # while current != all_states_minus_bot :
+   #     curreent = current cup what_uou_need_to_add
+   #     W[i][j] = *current 
+    i,j=0,0
+    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]):
+        i=1
+        while W[i-1][j] != W[i][j]:
+            W[i].append([])
+            if i == len(W)-1:
+                W.append([])
+            W[i+1][j]=W[i][j]
             for p in Vb:
-                if not p in W[i_prime][j_prime]:
-                    for q in W[i_prime][j_prime]:
+                if not p in W[i][j]:
+                    for q in W[i][j]:
                         if (p,_,q) in e:
-                            W[i_prime+1][j_prime].append(p)
+                            W[i+1][j].append(p)
                             break
             for p in Vr:
-                if not p in W[i_prime][j_prime]:
+                if not p in W[i][j]:
                     for q in Vb:
-                        if (p,_,q) in e and q in W[i_prime][j_prime]:
-                            W[i_prime+1][j_prime].append(p)
+                        if (p,_,q) in e and q in W[i][j]:
+                            W[i+1][j].append(p)
                             break
-            i_prime += 1
+            i += 1
         
-        for i in range(i+1):
-            if W[i][j_prime]==W[i+1][j_prime]:
-                kj=i
-                break
+        kj = i-1
 
-        if j_prime < j:
-            W[0][j_prime+1]=W[kj][j_prime]
-            for p in Vr:
-                for q in Vb:
-                    for r in Vb:
-                        if ((p,_,q) in e and (p,_,r) in e
-                            and q in W[kj][j_prime] and not r in W[kj][j_prime]
-                            and p not in W[0][j_prime+1]):
-                            W[0][j_prime+1].append(p)
-                            break
+        W[0].append(W[kj][j])
+        for p in Vr:
+            for q in Vb:
+                for r in Vb:
+                    if ((p,_,q) in e and (p,_,r) in e
+                        and q in W[kj][j] and not r in W[kj][j]
+                        and p not in W[0][j+1]):
+                        W[0][j+1].append(p)
+                        break
     
-    return W[i][j]
+    return W
         
+def rank(p,Vr,Vb,e):
+    W = strategie_gagnante(p,Vr,Vb,e)
+    for i in range(len(W)):
+        for j in range(len(W[i])):
+            if p in W[i][j]:
+                return (i,j)
+
+
 
                 
                 
