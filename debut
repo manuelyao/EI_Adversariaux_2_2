@@ -37,10 +37,6 @@ def strategie_gagnante(t,Vr,Vb,e):
     W = [[]]
     kj = 0
     W[0][0]=[t]
-   # current = {t}
-   # while current != all_states_minus_bot :
-   #     curreent = current cup what_uou_need_to_add
-   #     W[i][j] = *current 
     i,j=0,0
     while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]):
         i=1
@@ -48,7 +44,7 @@ def strategie_gagnante(t,Vr,Vb,e):
             W[i].append([])
             if i == len(W)-1:
                 W.append([])
-            W[i+1][j]=W[i][j]
+            W[i+1][j]=W[i][j].copy()
             for p in Vb:
                 if not p in W[i][j]:
                     for q in W[i][j]:
@@ -65,7 +61,7 @@ def strategie_gagnante(t,Vr,Vb,e):
         
         kj = i-1
 
-        W[0].append(W[kj][j])
+        W[0].append(W[kj][j].copy())
         for p in Vr:
             for q in Vb:
                 for r in Vb:
