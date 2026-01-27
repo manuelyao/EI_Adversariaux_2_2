@@ -34,28 +34,32 @@ def jeu_associe(IOSM, L):   #IOSM=[[(transition,arrivee)...]]
 
 
 def strategie_gagnante(t,Vr,Vb,e):
+    """state, point list, point list, 3-uple list -> set list list
+    Returns the W strategy matrix representing the best strategies
+    when it comes to reaching t. Also allows for the calculation of
+    the rank of a point."""
     W = [[]]
     kj = 0
     W[0][0]=[t]
     i,j=0,0
-    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]):
+    while set(W[i][j]) != set(Vr[:(len(Vr)-1)]+Vb[:(len(Vb)-1)]): #detection of stagnance
         i=1
         while W[i-1][j] != W[i][j]:
-            W[i].append([])
+            W[i].append([]) #dynamically grow w on axis 1
             if i == len(W)-1:
-                W.append([])
+                W.append([]) #dynamically grow w on axis 0
             W[i+1][j]=W[i][j].copy()
             for p in Vb:
                 if not p in W[i][j]:
                     for q in W[i][j]:
-                        if (p,_,q) in e:
-                            W[i+1][j].append(p)
-                            break
+                        if (p,_,q) in e:        #According to the formula, add all p of Vb
+                            W[i+1][j].append(p) #such that there exists q in Wij
+                            break               #with (p,q) in e
             for p in Vr:
                 if not p in W[i][j]:
-                    for q in Vb:
-                        if (p,_,q) in e and q in W[i][j]:
-                            W[i+1][j].append(p)
+                    for q in Vb:                #According to the formula, add all p of Vr
+                        if (p,_,q) in e and q in W[i][j]: #such that there exists q
+                            W[i+1][j].append(p) #in Vb with (p,q) in e and q in Wij
                             break
             i += 1
         
@@ -63,18 +67,20 @@ def strategie_gagnante(t,Vr,Vb,e):
 
         W[0].append(W[kj][j].copy())
         for p in Vr:
-            for q in Vb:
-                for r in Vb:
-                    if ((p,_,q) in e and (p,_,r) in e
-                        and q in W[kj][j] and not r in W[kj][j]
+            for q in Vb:                        #According to the formula, add all p of Vr
+                for r in Vb:                    #such that there exists (q,r) in Vb² with
+                    if ((p,_,q) in e and (p,_,r) in e #(p,q) and (p,r) in e, q in Wkj_j 
+                        and q in W[kj][j] and not r in W[kj][j] #and r not in Wkj_j
                         and p not in W[0][j+1]):
                         W[0][j+1].append(p)
                         break
     
     return W
+
+
         
-def rank(p,Vr,Vb,e):
-    W = strategie_gagnante(p,Vr,Vb,e)
+def rank(p,t,Vr,Vb,e):
+    W = strategie_gagnante(t,Vr,Vb,e)
     for i in range(len(W)):
         for j in range(len(W[i])):
             if p in W[i][j]:
