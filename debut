@@ -207,7 +207,7 @@ class ConformanceTester:
                 
                 # Case B: Observable Outputs
                 else:
-                    obs = self.io.get_input().strip() 
+                    obs = self.io.get_input(self.current_state).strip() 
                     print(f"System responds: {obs}")
                     
                     # Match the observation with the model's transitions
@@ -280,7 +280,7 @@ class ConformanceTester:
                     tp_index += 1
                 else:
                 # Observable transition
-                    obs = self.io.get_input().strip()
+                    obs = self.io.get_input(self.current_state).strip()
                     print(f"[TP] System responds: {obs}")
                     
                     if obs == action:
@@ -301,7 +301,6 @@ class ConformanceTester:
                         if found_next is not None:
                             print(f"System valid deviation from TP (received {obs}), attempting recovery...")
                             self.current_state = found_next
-                            self.io.reset()
                         else:
                             # Observation is not in the model at all
                             print("Non-conformance: Critical error!")
@@ -319,9 +318,10 @@ class ConformanceTester:
 
 
 class MockIOController(object):
-    def __init__(self):
+    def __init__(self, io_model = None):
         self.terminal = sys.stdout
         self.responses = ["!Good", "!Can"]
+        self.io = io_model
         self.response_idx = 0
         self.terminal = sys.stdout
         current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
@@ -334,19 +334,14 @@ class MockIOController(object):
         self.log.write(message)
         self.log.flush() 
 
-    def get_input(self):
-        response_s1 = random.choice(["!Good", "!bad"])
-        response_s2 = random.choice(["!Can", "!Unav"])
-        self.responses = [response_s1, response_s2]
-        if self.response_idx < len(self.responses):
-            resp = self.responses[self.response_idx]
-            self.response_idx += 1
+    def get_input(self, current_state):
+        transitions = self.io[current_state]
+        possible_outputs = [act for act, next_s in transitions if act.startswith('!')]
+        if possible_outputs:
+            resp = random.choice(possible_outputs)
         else:
             resp = "!Unknown"
         return resp
-    
-    def reset(self):
-        self.response_idx = 0
 
 if __name__ == "__main__":
     iosm_model = [
@@ -371,7 +366,7 @@ if __name__ == "__main__":
     print(f"Blue nodes: {Vb}")
     
     print("\n>>> 2. Initialisation...")
-    mock_io = MockIOController()
+    mock_io = MockIOController(iosm_model)
     
     tester = ConformanceTester(Vr, Vb, e, s0=0, io_controller=mock_io)
     
@@ -381,46 +376,3 @@ if __name__ == "__main__":
     result = tester.execute_test_purpose(test_path)
     
     print(f"\n>>> Result: {result}")
-    
-def atteignabilite(tp0,depart,Vr,Vb,e): 
-    etat_actuel=tp0
-    chemin=[etat_actuel]
-    while etat_actuel != depart:
-        W=strategie_gagnante(etat_actuel,Vr,Vb,e)
-        rank=[]
-        if etat_actuel in Vr:
-            mini= (np.inf,np.inf)
-            for p in get_predecessors(etat_actuel,e):
-                i,j=get_rank(p,W)
-                if (i,j)<mini:
-                    mini=(i,j)
-                    etat_precedent=p
-            etat_actuel=etat_precedent
-        else:
-            predecessors=get_predecessors(etat_actuel,e)
-            etat_actuel=random.choice(predecessors)[0]
-        chemin.append(etat_actuel)
-    chemin.append(depart)
-    return chemin[::-1]
-
-def suivre_obj(tp0,objectif,Vr,Vb,e):
-    etat_actuel=tp0
-    for start,act,end in objectif:
-        if start==etat_actuel and start in Vb:
-            etat_actuel=end
-        if start==etat_actuel and start in Vr:
-            etat_suivant=random.choice(get_successors(etat_actuel,e))
-            if etat_suivant!=end:
-                return False,etat_suivant
-            etat_actuel=etat_suivant
-    return True
-
-def test(tp0,objectif,Vr,Vb,e):
-    atteignabilite(tp0,0,Vr,Vb,e)
-    a=suivre_obj(tp0,objectif,Vr,Vb,e)
-    while a[0]==False:
-        atteignabilite(tp0,a[1],Vr,Vb,e)
-        a=suivre_obj(tp0,objectif,Vr,Vb,e)
-    atteignabilite(0,objectif[-1][-1],Vr,Vb,e)
-    return True
-
