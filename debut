@@ -1,8 +1,8 @@
 import numpy as np
 import random
 import sys
-import os
 import datetime
+import os
 
 def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
     Vr=[]
@@ -148,7 +148,7 @@ class ConformanceTester:
             if self.current_state in self.Vb:
                 # --- Blue Turn (Tester) ---
                 succs = get_successors(self.current_state, self.e)
-                best_move = None
+                best_next = None
                 best_rank = (np.inf, np.inf)
                 
                 for next_node in succs:
@@ -156,19 +156,19 @@ class ConformanceTester:
                     # Lexicographical comparison: (j, i) tuple comparison works natively in Python
                     if r < best_rank:
                         best_rank = r
-                        best_move = next_node
+                        best_next = next_node
                 
-                if best_move is None:
+                if best_next is None:
                     print("Error: No move possible (Deadlock in Tester state).")
                     return False
 
                 # Execute action
-                action = get_transition_action(self.current_state, best_move, self.e)
+                action = get_transition_action(self.current_state, best_next, self.e)
                 if action and action != 'tau':
-                    self.io.write_output(action) # Send !Input
+
                     print(f"Tester sends: {action}")
                 
-                self.current_state = best_move
+                self.current_state = best_next
 
             elif self.current_state in self.Vr:
                 # --- Red Turn (System) ---
@@ -190,6 +190,7 @@ class ConformanceTester:
                                 best_rank = r
                     
                     self.current_state = best_next
+                
                 else:
                     obs = self.io.get_input().strip() # Read ?Output
                     print(f"System responds: {obs}")
@@ -245,7 +246,6 @@ class ConformanceTester:
             
             if current_tp_node in self.Vb:
                 if action and action != 'tau':
-                    self.io.write_output(action)
                     print(f"[TP] Tester sends: {action}")
                 self.current_state = next_tp_node
                 tp_index += 1
@@ -271,10 +271,12 @@ class ConformanceTester:
                                 found_next = s
                                 break
                         
-                        if found_next:
+                        if found_next is not None:
                             print(f"System valid deviation from TP (received {obs}), attempting recovery...")
                             self.current_state = found_next
                             # Logic will loop back, detect deviation, and trigger Preamble
+                            self.io.reset()  # Reset mock IO for recovery
+                            self.io
                         else:
                             print("Non-conformance: Critical error!")
                             return "FAIL"
@@ -288,22 +290,50 @@ class ConformanceTester:
         
         return "PASS"
 
-class MockIOController:
-    def __init__(self, responses=None):
+
+
+class IOController(object):
+    def __init__(self):
         self.terminal = sys.stdout
-        self.responses = responses if responses else ["!Good", "!Can"]
-        self.response_idx = 0
+        current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        self.log = open("boisson_%s.log" % current_time, "a")
 
     def write_output(self, message):
-        pass 
+        if not message.endswith(os.linesep):
+            message += os.linesep
+        self.terminal.write(message)
+        self.log.write(message)
+        self.log.flush() 
 
     def get_input(self):
+        got = input()
+        if not got.endswith(os.linesep):
+            self.log.write(got + os.linesep)
+        else:
+            self.log.write(got)
+        self.log.flush()
+        return got
+
+class MockIOController:
+    def __init__(self):
+        self.terminal = sys.stdout
+        self.responses = ["!Good", "!Can"]
+        self.response_idx = 0
+ 
+
+    def get_input(self):
+        response_s1 = random.choice(["!Good", "!bad"])
+        response_s2 = random.choice(["!Can", "!Unav"])
+        self.responses = [response_s1, response_s2]
         if self.response_idx < len(self.responses):
             resp = self.responses[self.response_idx]
             self.response_idx += 1
         else:
             resp = "!Unknown"
         return resp
+    
+    def reset(self):
+        self.response_idx = 0
 
 if __name__ == "__main__":
     iosm_model = [
@@ -328,11 +358,11 @@ if __name__ == "__main__":
     print(f"Blue nodes: {Vb}")
     
     print("\n>>> 2. Initialisation...")
-    mock_io = MockIOController(responses=["!Good", "!Can"])
+    mock_io = MockIOController()
     
     tester = ConformanceTester(Vr, Vb, e, s0=0, io_controller=mock_io)
     
-    test_path = [0, 1, 2] 
+    test_path = [1, 2, 3]  # Test Purpose: from state 1 to 2 to 3
     
     print("\n>>> 3. test start...")
     result = tester.execute_test_purpose(test_path)
