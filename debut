@@ -358,8 +358,6 @@ if __name__ == "__main__":
     [('!Can', 0), ('!Unav', 2)] 
     ]
     
-    L = ['?Coin', '?Soda'] 
-    
     print(">>> 1.Reconstruct the graph  ...")
     Vr, Vb, e = jeu_associe(iosm_model)
     print(f"Red nodes: {Vr}")
