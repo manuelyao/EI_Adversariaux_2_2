@@ -12,7 +12,7 @@ def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
             if t.startswith('!'):
                 if s not in Vr:
                     Vr.append(s)
-                    e.append((s,'tau','puit'))
+                    e.append((s,'tau','puits'))
 
     Vb=[i for i in range(len(IOSM)) if i not in Vr]
     n=len(IOSM)
@@ -24,7 +24,7 @@ def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
             else:
                 if s in Vb:
                     Vr.append(n)
-                    e.append((n, 'tau', 'puit'))
+                    e.append((n, 'tau', 'puits'))
                 else:
                     Vb.append(n)
                 
@@ -33,10 +33,10 @@ def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
                 n+=1
     
     Vr.append(n)
-    if 'puit' not in Vb: 
-        Vb.append('puit')
-    e.append((n,'tau','puit'))
-    e.append(('puit','tau',n))
+    if 'puits' not in Vb: 
+        Vb.append('puits')
+    e.append((n,'tau','puits'))
+    e.append(('puits','tau',n))
     
     return (Vr,Vb,e)
 
@@ -48,14 +48,14 @@ def strategie_gagnante(t,Vr,Vb,e):
     when it comes to reaching t. Also allows for the calculation of
     the rank of a point."""
     
-    all_nodes = Vr + Vb + ['puit']
+    all_nodes = Vr + Vb + ['puits']
     succs = {node: [] for node in all_nodes}
     for u, _, v in e:
         if u in succs: 
             succs[u].append(v)
     
     W = []
-    current_set = {t, 'puit'}
+    current_set = {t, 'puits'}
     W.append([current_set])
     
     j = 0
@@ -192,12 +192,12 @@ class ConformanceTester:
                     best_rank = get_rank(best_next, W)
                     
                     for s_next in succs:
-                        # If currently pointing to 'puit' but a valid node exists, switch.
-                        if best_next == 'puit' and s_next != 'puit':
+                        # If currently pointing to 'puits' but a valid node exists, switch.
+                        if best_next == 'puits' and s_next != 'puits':
                             best_next = s_next
                             best_rank = get_rank(s_next, W)
                         # Otherwise, standard Rank minimization
-                        elif s_next != 'puit':
+                        elif s_next != 'puits':
                             r = get_rank(s_next, W)
                             if r < best_rank:
                                 best_next = s_next
@@ -222,12 +222,12 @@ class ConformanceTester:
                     # If the observation is not allowed in the model -> Fail
                     if not found:
                         print(f"Non-conformance: Received undefined message '{obs}'!")
-                        self.current_state = 'puit'
+                        self.current_state = 'puits'
                         return False
 
             # Check if we fell into the sink state
-            if self.current_state == 'puit':
-                print("System entered non-conformance state - Puit. Test ended.")
+            if self.current_state == 'puits':
+                print("System entered non-conformance state - puits. Test ended.")
                 return False
                 
         print(f"Successfully reached target: {self.current_state}")
@@ -359,7 +359,7 @@ if __name__ == "__main__":
     ]
     
     test_path = [1, 2]  # Test Purpose: from state 1 to 2
-    
+
     print(">>> 1.Reconstruct the graph  ...")
     Vr, Vb, e = jeu_associe(iosm_model)
     print(f"Red nodes: {Vr}")
