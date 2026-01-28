@@ -122,35 +122,40 @@ def get_transition_action(start_node, end_node, e):
 
 class ConformanceTester:
     def __init__(self, Vr, Vb, e, s0, io_controller):
-        self.Vr = Vr
-        self.Vb = Vb
-        self.e = e
+        self.Vr = Vr  
+        self.Vb = Vb  
+        self.e = e    
         self.s0 = s0 # System initial state
         self.current_state = s0
-        self.io = io_controller
+        self.io = io_controller 
 
     def play_reachability(self, target_node):
         """
-        Execute reachability game: Drive the system to target_node using the Rank strategy.
+        Executes the Reachability Game.
+        Goal: Drive the system from self.current_state to target_node.
+        Strategy: Use the computed Winning Strategy (W) to always pick the move 
+        that minimizes the 'Rank' (distance/cost) to the target.
         """
         print(f"--- Starting Reachability Game, Target: {target_node} ---")
         
-        # 1. Calculate the Rank for the entire graph regarding this target
         W = strategie_gagnante(target_node, self.Vr, self.Vb, self.e)
         
         while self.current_state != target_node:
+            # Check the rank of the current state
             current_rank = get_rank(self.current_state, W)
             
+            # If Rank is infinite, the target is topologically unreachable from here.
             if current_rank == (np.inf, np.inf):
                 print(f"Error: Target state {target_node} unreachable from {self.current_state}.")
                 return False
 
+            # === Blue State: Tester's Turn (Input) ===
             if self.current_state in self.Vb:
-                # --- Blue Turn (Tester) ---
                 succs = get_successors(self.current_state, self.e)
                 best_next = None
                 best_rank = (np.inf, np.inf)
                 
+                # Strategy: Choose the successor with the lowest Rank (lexicographical comparison)
                 for next_node in succs:
                     r = get_rank(next_node, W)
                     # Lexicographical comparison: (j, i) tuple comparison works natively in Python
@@ -162,27 +167,33 @@ class ConformanceTester:
                     print("Error: No move possible (Deadlock in Tester state).")
                     return False
 
-                # Execute action
                 action = get_transition_action(self.current_state, best_next, self.e)
+                
+                # Send Input to the System (if it's not an internal 'tau' move)
                 if action and action != 'tau':
-
+                    self.io.write_output(action)
                     print(f"Tester sends: {action}")
                 
                 self.current_state = best_next
 
+            # === Red State: System's Turn (Output) ===
             elif self.current_state in self.Vr:
-                # --- Red Turn (System) ---
                 succs = get_successors(self.current_state, self.e)
+                # Check if this state produces observable outputs or just internal transitions tau
+                
                 real_outputs = [act for s, act, end in self.e if s == self.current_state and act != 'tau']
                 
+                # Case A: Internal Transitions (Tau) only
                 if not real_outputs:
                     best_next = succs[0]
                     best_rank = get_rank(best_next, W)
                     
                     for s_next in succs:
+                        # If currently pointing to 'puit' but a valid node exists, switch.
                         if best_next == 'puit' and s_next != 'puit':
                             best_next = s_next
                             best_rank = get_rank(s_next, W)
+                        # Otherwise, standard Rank minimization
                         elif s_next != 'puit':
                             r = get_rank(s_next, W)
                             if r < best_rank:
@@ -191,10 +202,12 @@ class ConformanceTester:
                     
                     self.current_state = best_next
                 
+                # Case B: Observable Outputs
                 else:
-                    obs = self.io.get_input().strip() # Read ?Output
+                    obs = self.io.get_input().strip() 
                     print(f"System responds: {obs}")
                     
+                    # Match the observation with the model's transitions
                     found = False
                     for next_node in succs:
                         act = get_transition_action(self.current_state, next_node, self.e)
@@ -203,67 +216,77 @@ class ConformanceTester:
                             found = True
                             break
                     
+                    # If the observation is not allowed in the model -> Fail
                     if not found:
                         print(f"Non-conformance: Received undefined message '{obs}'!")
                         self.current_state = 'puit'
                         return False
 
+            # Check if we fell into the sink state
             if self.current_state == 'puit':
-                print("System entered non-conformance state (Puit). Test ended.")
+                print("System entered non-conformance state - Puit. Test ended.")
                 return False
                 
         print(f"Successfully reached target: {self.current_state}")
         return True
 
     def execute_test_purpose(self, tp_path):
-        """
-        Main logic for Conformance Game
-        """
+        #Conformance Testing.
         tp_root = tp_path[0]
         
-        # 1. Preamble
+        # === Phase 1: Preamble ===
+        # Ensure the system is at the starting node of the Test Purpose
         print("\n=== Phase 1: Preamble ===")
         if self.current_state != tp_root:
             success = self.play_reachability(tp_root)
             if not success: return "FAIL_PREAMBLE"
             
-        # 2. Body
+        # === Phase 2: Body ===
+        # Traverse the path defined by the Test Purpose
         print("\n=== Phase 2: Body ===")
         tp_index = 0
         while tp_index < len(tp_path) - 1:
             current_tp_node = tp_path[tp_index]
             next_tp_node = tp_path[tp_index + 1]
             
-            # Check deviation
+            # 1. Deviation Check
+            # Ensure we are still on the path required by the TP.
             if self.current_state != current_tp_node:
                 print("Deviated from Test Purpose path, re-executing Preamble...")
                 success = self.play_reachability(tp_root)
                 if not success: return "FAIL_RECOVERY"
-                tp_index = 0 
+                tp_index = 0 # Restart TP execution
                 continue
 
             action = get_transition_action(current_tp_node, next_tp_node, self.e)
             
+            # Case A: Tester sends stimulus (Blue Node)
             if current_tp_node in self.Vb:
                 if action and action != 'tau':
                     print(f"[TP] Tester sends: {action}")
                 self.current_state = next_tp_node
                 tp_index += 1
                 
+            # Case B: Tester waits for response (Red Node)
             elif current_tp_node in self.Vr:
                 real_outputs = [act for s, act, end in self.e if s == current_tp_node and act != 'tau']
+                
+                # Silent transition (Tau)
                 if not real_outputs:
                     self.current_state = next_tp_node
                     tp_index += 1
                 else:
+                # Observable transition
                     obs = self.io.get_input().strip()
                     print(f"[TP] System responds: {obs}")
                     
                     if obs == action:
+                        # Expected response received -> Proceed
                         self.current_state = next_tp_node
                         tp_index += 1
                     else:
-                        # Valid deviation handling
+                        # The received output matches a valid transition in the model, 
+                        # but NOT the one expected by the Test Purpose.
                         succs = get_successors(self.current_state, self.e)
                         found_next = None
                         for s in succs:
@@ -271,19 +294,20 @@ class ConformanceTester:
                                 found_next = s
                                 break
                         
+                        # Check if found_next is not None
                         if found_next is not None:
                             print(f"System valid deviation from TP (received {obs}), attempting recovery...")
                             self.current_state = found_next
-                            # Logic will loop back, detect deviation, and trigger Preamble
-                            self.io.reset()  # Reset mock IO for recovery
-                            self.io
+                            self.io.reset()
                         else:
+                            # Observation is not in the model at all
                             print("Non-conformance: Critical error!")
                             return "FAIL"
 
         print("Test Purpose Achieved!")
 
-        # 3. Postamble
+        # === Phase 3: Postamble ===
+        # Return the system to the initial state (s0)
         print("\n=== Phase 3: Postamble ===")
         success = self.play_reachability(self.s0)
         if not success: return "FAIL_POSTAMBLE"
@@ -291,9 +315,11 @@ class ConformanceTester:
         return "PASS"
 
 
-
-class IOController(object):
+class MockIOController(object):
     def __init__(self):
+        self.terminal = sys.stdout
+        self.responses = ["!Good", "!Can"]
+        self.response_idx = 0
         self.terminal = sys.stdout
         current_time = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         self.log = open("boisson_%s.log" % current_time, "a")
@@ -304,22 +330,6 @@ class IOController(object):
         self.terminal.write(message)
         self.log.write(message)
         self.log.flush() 
-
-    def get_input(self):
-        got = input()
-        if not got.endswith(os.linesep):
-            self.log.write(got + os.linesep)
-        else:
-            self.log.write(got)
-        self.log.flush()
-        return got
-
-class MockIOController:
-    def __init__(self):
-        self.terminal = sys.stdout
-        self.responses = ["!Good", "!Can"]
-        self.response_idx = 0
- 
 
     def get_input(self):
         response_s1 = random.choice(["!Good", "!bad"])
@@ -362,7 +372,7 @@ if __name__ == "__main__":
     
     tester = ConformanceTester(Vr, Vb, e, s0=0, io_controller=mock_io)
     
-    test_path = [1, 2, 3]  # Test Purpose: from state 1 to 2 to 3
+    test_path = [1, 2]  # Test Purpose: from state 1 to 2
     
     print("\n>>> 3. test start...")
     result = tester.execute_test_purpose(test_path)
