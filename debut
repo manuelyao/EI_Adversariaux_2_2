@@ -10,7 +10,6 @@ def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
     for s in range(len(IOSM)):
         for (t,s_prime) in IOSM[s]:
             if t.startswith('!'):
-                a=t[1:]
                 if s not in Vr:
                     Vr.append(s)
                     e.append((s,'tau','puit'))
@@ -34,7 +33,8 @@ def jeu_associe(IOSM):   #IOSM=[[(transition,arrivee)...]]
                 n+=1
     
     Vr.append(n)
-    if 'puit' not in Vb: Vb.append('puit')
+    if 'puit' not in Vb: 
+        Vb.append('puit')
     e.append((n,'tau','puit'))
     e.append(('puit','tau',n))
     
@@ -112,8 +112,55 @@ def get_rank(p, W):
 def get_successors(node, e):
     return [end for start, act, end in e if start == node]
 
+def get_predecessors(node, e):
+    return [start for start, act, end in e if end == node]
+
 def get_transition_action(start_node, end_node, e):
     for s, act, end in e:
         if s == start_node and end == end_node:
             return act
     return None
+
+
+def atteignabilite(tp0,depart,Vr,Vb,e): 
+    etat_actuel=tp0
+    chemin=[etat_actuel]
+    while etat_actuel != depart:
+        W=strategie_gagnante(etat_actuel,Vr,Vb,e)
+        rank=[]
+        if etat_actuel in Vr:
+            mini= (np.inf,np.inf)
+            for p in get_predecessors(etat_actuel,e):
+                i,j=get_rank(p,W)
+                if (i,j)<mini:
+                    mini=(i,j)
+                    etat_precedent=p
+            etat_actuel=etat_precedent
+        else:
+            predecessors=get_predecessors(etat_actuel,e)
+            etat_actuel=random.choice(predecessors)[0]
+        chemin.append(etat_actuel)
+    chemin.append(depart)
+    return chemin[::-1]
+
+def suivre_obj(tp0,objectif,Vr,Vb,e):
+    etat_actuel=tp0
+    for start,act,end in objectif:
+        if start==etat_actuel and start in Vb:
+            etat_actuel=end
+        if start==etat_actuel and start in Vr:
+            etat_suivant=random.choice(get_successors(etat_actuel,e))
+            if etat_suivant!=end:
+                return False,etat_suivant
+            etat_actuel=etat_suivant
+    return True
+
+def test(tp0,objectif,Vr,Vb,e):
+    atteignabilite(tp0,0,Vr,Vb,e)
+    a=suivre_obj(tp0,objectif,Vr,Vb,e)
+    while a[0]==False:
+        atteignabilite(tp0,a[1],Vr,Vb,e)
+        a=suivre_obj(tp0,objectif,Vr,Vb,e)
+    atteignabilite(0,objectif[-1][-1],Vr,Vb,e)
+    return True
+
