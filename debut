@@ -358,6 +358,8 @@ if __name__ == "__main__":
     [('!Can', 0), ('!Unav', 2)] 
     ]
     
+    test_path = [1, 2]  # Test Purpose: from state 1 to 2
+    
     print(">>> 1.Reconstruct the graph  ...")
     Vr, Vb, e = jeu_associe(iosm_model)
     print(f"Red nodes: {Vr}")
@@ -368,7 +370,6 @@ if __name__ == "__main__":
     
     tester = ConformanceTester(Vr, Vb, e, s0=0, io_controller=mock_io)
     
-    test_path = [1, 2]  # Test Purpose: from state 1 to 2
     
     print("\n>>> 3. test start...")
     result = tester.execute_test_purpose(test_path)
