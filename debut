@@ -319,8 +319,7 @@ class ConformanceTester:
 
 class MockIOController(object):
     def __init__(self, io_model = None):
-        self.terminal = sys.stdout
-        self.responses = ["!Good", "!Can"]
+        self.terminal = sys.stdout   
         self.io = io_model
         self.response_idx = 0
         self.terminal = sys.stdout
@@ -346,25 +345,26 @@ class MockIOController(object):
 if __name__ == "__main__":
     iosm_model = [
     # s0:initial state
-    [('?Coin', 1)], 
+    [('?join_request', 1)], 
     
     # s1:1st state after coin
-    [('!Good', 2), ('!bad', 0)], 
+    [('!join_agreement', 2),('!disagreement', 0)], 
     
     # s2:2nd state after good coin
-    [('?soda', 3), ('?cancel', 0)],
+    [('?fail_joined', 0), ('?joined_success', 3)],
     
     # s3:final state after soda
-    [('!Can', 0), ('!Unav', 2)] 
+    [('!update_platoon', 0), ('!fail_update_platoon', 2)] 
     ]
     
-    test_path = [1, 2]  # Test Purpose: from state 1 to 2
+    test_path = [1, 2, 3]  # Test Purpose: from state 1 to 2 to 3
 
     print(">>> 1.Reconstruct the graph  ...")
     Vr, Vb, e = jeu_associe(iosm_model)
     print(f"Red nodes: {Vr}")
     print(f"Blue nodes: {Vb}")
-    
+    print(f"Test_path: {', '.join([f's{node}' for node in test_path])}")
+
     print("\n>>> 2. Initialisation...")
     mock_io = MockIOController(iosm_model)
     
